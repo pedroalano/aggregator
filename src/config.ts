@@ -44,6 +44,8 @@ export function readConfig(): Config {
   return validateConfig(JSON.parse(data));
 }
 
-export function setUser(cfg: Config): void {
+export function setUser(userName: string): void {
+  const cfg = readConfig();
+  cfg.currentUserName = userName;
   writeConfig(cfg);
 }
