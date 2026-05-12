@@ -1,0 +1,27 @@
+{
+  "name": "aggregator",
+  "version": "1.0.0",
+  "description": "I am going to build an RSS feed aggregator in TypeScript!",
+  "main": "index.js",
+  "scripts": {
+    "start": "tsx ./src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pedroalano/aggregator.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/pedroalano/aggregator/issues"
+  },
+  "homepage": "https://github.com/pedroalano/aggregator#readme",
+  "devDependencies": {
+    "@types/node": "^25.7.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  }
+}
