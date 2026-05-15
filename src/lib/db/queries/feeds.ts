@@ -10,6 +10,11 @@ export async function createFeed(name: string, url: string, userId: string) {
   return result;
 }
 
+export async function getFeedByUrl(url: string) {
+  const [row] = await db.select().from(feeds).where(eq(feeds.url, url));
+  return row;
+}
+
 export async function getFeedsWithUser() {
   return db
     .select({

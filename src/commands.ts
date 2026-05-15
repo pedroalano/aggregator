@@ -5,7 +5,15 @@ import {
   getUserByName,
   getUsers,
 } from "./lib/db/queries/users.js";
-import { createFeed, getFeedsWithUser } from "./lib/db/queries/feeds.js";
+import {
+  createFeed,
+  getFeedByUrl,
+  getFeedsWithUser,
+} from "./lib/db/queries/feeds.js";
+import {
+  createFeedFollow,
+  getFeedFollowsForUser,
+} from "./lib/db/queries/feed_follows.js";
 import type { Feed, User } from "./lib/db/schema.js";
 import { fetchFeed } from "./lib/rss/feed.js";
 
@@ -87,14 +95,7 @@ export function printFeed(feed: Feed, user: User): void {
   console.log(`* user:        ${user.name}`);
 }
 
-export async function handlerAddFeed(
-  cmdName: string,
-  ...args: string[]
-): Promise<void> {
-  if (args.length < 2) {
-    throw new Error(`usage: ${cmdName} <name> <url>`);
-  }
-  const [name, url] = args;
+async function getCurrentUser(): Promise<User> {
   const cfg = readConfig();
   if (!cfg.currentUserName) {
     throw new Error("no current user set; run `login <name>` first");
@@ -103,8 +104,52 @@ export async function handlerAddFeed(
   if (!user) {
     throw new Error(`current user ${cfg.currentUserName} not found`);
   }
+  return user;
+}
+
+export async function handlerAddFeed(
+  cmdName: string,
+  ...args: string[]
+): Promise<void> {
+  if (args.length < 2) {
+    throw new Error(`usage: ${cmdName} <name> <url>`);
+  }
+  const [name, url] = args;
+  const user = await getCurrentUser();
   const feed = await createFeed(name, url, user.id);
   printFeed(feed, user);
+  const follow = await createFeedFollow(user.id, feed.id);
+  console.log(`feed: ${follow.feedName}`);
+  console.log(`user: ${follow.userName}`);
+}
+
+export async function handlerFollow(
+  cmdName: string,
+  ...args: string[]
+): Promise<void> {
+  if (args.length === 0) {
+    throw new Error(`usage: ${cmdName} <url>`);
+  }
+  const url = args[0];
+  const feed = await getFeedByUrl(url);
+  if (!feed) {
+    throw new Error(`feed not found for url ${url}`);
+  }
+  const user = await getCurrentUser();
+  const follow = await createFeedFollow(user.id, feed.id);
+  console.log(`feed: ${follow.feedName}`);
+  console.log(`user: ${follow.userName}`);
+}
+
+export async function handlerFollowing(
+  _cmdName: string,
+  ..._args: string[]
+): Promise<void> {
+  const user = await getCurrentUser();
+  const rows = await getFeedFollowsForUser(user.id);
+  for (const r of rows) {
+    console.log(`* ${r.feedName}`);
+  }
 }
 
 export async function handlerAgg(
