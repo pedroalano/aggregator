@@ -5,6 +5,8 @@ import {
   getUserByName,
   getUsers,
 } from "./lib/db/queries/users.js";
+import { createFeed } from "./lib/db/queries/feeds.js";
+import type { Feed, User } from "./lib/db/schema.js";
 import { fetchFeed } from "./lib/rss/feed.js";
 
 export type CommandHandler = (
@@ -73,6 +75,36 @@ export async function handlerReset(
 ): Promise<void> {
   await deleteUsers();
   console.log("users table reset");
+}
+
+export function printFeed(feed: Feed, user: User): void {
+  console.log(`* id:          ${feed.id}`);
+  console.log(`* created_at:  ${feed.createdAt.toISOString()}`);
+  console.log(`* updated_at:  ${feed.updatedAt.toISOString()}`);
+  console.log(`* name:        ${feed.name}`);
+  console.log(`* url:         ${feed.url}`);
+  console.log(`* user_id:     ${feed.userId}`);
+  console.log(`* user:        ${user.name}`);
+}
+
+export async function handlerAddFeed(
+  cmdName: string,
+  ...args: string[]
+): Promise<void> {
+  if (args.length < 2) {
+    throw new Error(`usage: ${cmdName} <name> <url>`);
+  }
+  const [name, url] = args;
+  const cfg = readConfig();
+  if (!cfg.currentUserName) {
+    throw new Error("no current user set; run `login <name>` first");
+  }
+  const user = await getUserByName(cfg.currentUserName);
+  if (!user) {
+    throw new Error(`current user ${cfg.currentUserName} not found`);
+  }
+  const feed = await createFeed(name, url, user.id);
+  printFeed(feed, user);
 }
 
 export async function handlerAgg(
