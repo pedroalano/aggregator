@@ -5,7 +5,7 @@ import {
   getUserByName,
   getUsers,
 } from "./lib/db/queries/users.js";
-import { createFeed } from "./lib/db/queries/feeds.js";
+import { createFeed, getFeedsWithUser } from "./lib/db/queries/feeds.js";
 import type { Feed, User } from "./lib/db/schema.js";
 import { fetchFeed } from "./lib/rss/feed.js";
 
@@ -113,6 +113,18 @@ export async function handlerAgg(
 ): Promise<void> {
   const feed = await fetchFeed("https://www.wagslane.dev/index.xml");
   console.log(JSON.stringify(feed, null, 2));
+}
+
+export async function handlerFeeds(
+  _cmdName: string,
+  ..._args: string[]
+): Promise<void> {
+  const rows = await getFeedsWithUser();
+  for (const f of rows) {
+    console.log(`* ${f.name}`);
+    console.log(`  url:  ${f.url}`);
+    console.log(`  user: ${f.userName}`);
+  }
 }
 
 export async function handlerUsers(
