@@ -5,6 +5,7 @@ import {
   getUserByName,
   getUsers,
 } from "./lib/db/queries/users.js";
+import { fetchFeed } from "./lib/rss/feed.js";
 
 export type CommandHandler = (
   cmdName: string,
@@ -72,6 +73,14 @@ export async function handlerReset(
 ): Promise<void> {
   await deleteUsers();
   console.log("users table reset");
+}
+
+export async function handlerAgg(
+  _cmdName: string,
+  ..._args: string[]
+): Promise<void> {
+  const feed = await fetchFeed("https://www.wagslane.dev/index.xml");
+  console.log(JSON.stringify(feed, null, 2));
 }
 
 export async function handlerUsers(
