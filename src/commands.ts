@@ -18,6 +18,7 @@ import {
   deleteFeedFollow,
   getFeedFollowsForUser,
 } from "./lib/db/queries/feed_follows.js";
+import { createPost, getPostsForUser } from "./lib/db/queries/posts.js";
 import type { Feed, User } from "./lib/db/schema.js";
 import { fetchFeed } from "./lib/rss/feed.js";
 
@@ -183,6 +184,12 @@ export async function handlerFollowing(
   }
 }
 
+function parsePubDate(raw: string | undefined): Date | null {
+  if (!raw) return null;
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 async function scrapeFeeds(): Promise<void> {
   const feed = await getNextFeedToFetch();
   if (!feed) {
@@ -191,9 +198,21 @@ async function scrapeFeeds(): Promise<void> {
   }
   await markFeedFetched(feed.id);
   const rss = await fetchFeed(feed.url);
-  console.log(`feed: ${feed.name}`);
+  console.log(`feed: ${feed.name} (${rss.channel.item.length} items)`);
   for (const item of rss.channel.item) {
-    console.log(`- ${item.title}`);
+    try {
+      await createPost({
+        title: item.title,
+        url: item.link,
+        description: item.description || null,
+        publishedAt: parsePubDate(item.pubDate),
+        feedId: feed.id,
+      });
+    } catch (err) {
+      console.error(
+        `failed to save post ${item.link}: ${(err as Error).message}`,
+      );
+    }
   }
 }
 
@@ -234,6 +253,32 @@ export async function handlerFeeds(
     console.log(`* ${f.name}`);
     console.log(`  url:  ${f.url}`);
     console.log(`  user: ${f.userName}`);
+  }
+}
+
+export async function handlerBrowse(
+  _cmdName: string,
+  user: User,
+  ...args: string[]
+): Promise<void> {
+  let limit = 2;
+  if (args.length > 0) {
+    const n = parseInt(args[0], 10);
+    if (Number.isNaN(n) || n <= 0) {
+      throw new Error(`invalid limit: ${args[0]}`);
+    }
+    limit = n;
+  }
+  const rows = await getPostsForUser(user.id, limit);
+  if (rows.length === 0) {
+    console.log("no posts");
+    return;
+  }
+  for (const p of rows) {
+    const when = p.publishedAt ? p.publishedAt.toISOString() : "unknown";
+    console.log(`- ${p.title} [${when}]`);
+    console.log(`  ${p.url}`);
+    if (p.description) console.log(`  ${p.description}`);
   }
 }
 

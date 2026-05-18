@@ -29,6 +29,13 @@
       "when": 1779135093750,
       "tag": "0003_fair_magus",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1779146905595,
+      "tag": "0004_loving_chronomancer",
+      "breakpoints": true
     }
   ]
 }
