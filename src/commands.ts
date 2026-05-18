@@ -21,7 +21,21 @@ export type CommandHandler = (
   cmdName: string,
   ...args: string[]
 ) => Promise<void>;
+export type UserCommandHandler = (
+  cmdName: string,
+  user: User,
+  ...args: string[]
+) => Promise<void>;
 export type CommandsRegistry = Record<string, CommandHandler>;
+
+export function middlewareLoggedIn(
+  handler: UserCommandHandler,
+): CommandHandler {
+  return async (cmdName, ...args) => {
+    const user = await getCurrentUser();
+    return handler(cmdName, user, ...args);
+  };
+}
 
 export function registerCommand(
   registry: CommandsRegistry,
@@ -109,13 +123,13 @@ async function getCurrentUser(): Promise<User> {
 
 export async function handlerAddFeed(
   cmdName: string,
+  user: User,
   ...args: string[]
 ): Promise<void> {
   if (args.length < 2) {
     throw new Error(`usage: ${cmdName} <name> <url>`);
   }
   const [name, url] = args;
-  const user = await getCurrentUser();
   const feed = await createFeed(name, url, user.id);
   printFeed(feed, user);
   const follow = await createFeedFollow(user.id, feed.id);
@@ -125,6 +139,7 @@ export async function handlerAddFeed(
 
 export async function handlerFollow(
   cmdName: string,
+  user: User,
   ...args: string[]
 ): Promise<void> {
   if (args.length === 0) {
@@ -135,7 +150,6 @@ export async function handlerFollow(
   if (!feed) {
     throw new Error(`feed not found for url ${url}`);
   }
-  const user = await getCurrentUser();
   const follow = await createFeedFollow(user.id, feed.id);
   console.log(`feed: ${follow.feedName}`);
   console.log(`user: ${follow.userName}`);
@@ -143,9 +157,9 @@ export async function handlerFollow(
 
 export async function handlerFollowing(
   _cmdName: string,
+  user: User,
   ..._args: string[]
 ): Promise<void> {
-  const user = await getCurrentUser();
   const rows = await getFeedFollowsForUser(user.id);
   for (const r of rows) {
     console.log(`* ${r.feedName}`);
