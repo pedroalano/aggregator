@@ -9,7 +9,10 @@ import {
   createFeed,
   getFeedByUrl,
   getFeedsWithUser,
+  getNextFeedToFetch,
+  markFeedFetched,
 } from "./lib/db/queries/feeds.js";
+import { parseDuration } from "./lib/duration.js";
 import {
   createFeedFollow,
   deleteFeedFollow,
@@ -180,12 +183,46 @@ export async function handlerFollowing(
   }
 }
 
+async function scrapeFeeds(): Promise<void> {
+  const feed = await getNextFeedToFetch();
+  if (!feed) {
+    console.log("no feeds to scrape");
+    return;
+  }
+  await markFeedFetched(feed.id);
+  const rss = await fetchFeed(feed.url);
+  console.log(`feed: ${feed.name}`);
+  for (const item of rss.channel.item) {
+    console.log(`- ${item.title}`);
+  }
+}
+
+function handleScrapeError(err: unknown) {
+  console.error(`scrape error: ${(err as Error).message}`);
+}
+
 export async function handlerAgg(
-  _cmdName: string,
-  ..._args: string[]
+  cmdName: string,
+  ...args: string[]
 ): Promise<void> {
-  const feed = await fetchFeed("https://www.wagslane.dev/index.xml");
-  console.log(JSON.stringify(feed, null, 2));
+  if (args.length === 0) {
+    throw new Error(`usage: ${cmdName} <time_between_reqs>`);
+  }
+  const timeBetweenRequests = parseDuration(args[0]);
+  console.log(`Collecting feeds every ${args[0]}`);
+
+  scrapeFeeds().catch(handleScrapeError);
+  const interval = setInterval(() => {
+    scrapeFeeds().catch(handleScrapeError);
+  }, timeBetweenRequests);
+
+  await new Promise<void>((resolve) => {
+    process.on("SIGINT", () => {
+      console.log("Shutting down feed aggregator...");
+      clearInterval(interval);
+      resolve();
+    });
+  });
 }
 
 export async function handlerFeeds(
