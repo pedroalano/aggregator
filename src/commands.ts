@@ -12,6 +12,7 @@ import {
 } from "./lib/db/queries/feeds.js";
 import {
   createFeedFollow,
+  deleteFeedFollow,
   getFeedFollowsForUser,
 } from "./lib/db/queries/feed_follows.js";
 import type { Feed, User } from "./lib/db/schema.js";
@@ -153,6 +154,19 @@ export async function handlerFollow(
   const follow = await createFeedFollow(user.id, feed.id);
   console.log(`feed: ${follow.feedName}`);
   console.log(`user: ${follow.userName}`);
+}
+
+export async function handlerUnfollow(
+  cmdName: string,
+  user: User,
+  ...args: string[]
+): Promise<void> {
+  if (args.length === 0) {
+    throw new Error(`usage: ${cmdName} <url>`);
+  }
+  const url = args[0];
+  await deleteFeedFollow(user.id, url);
+  console.log(`${user.name} unfollowed ${url}`);
 }
 
 export async function handlerFollowing(
